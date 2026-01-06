@@ -1,742 +1,282 @@
 <!doctype html>
 <html lang="vi">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>BẢNG THEO DÕI HOẠT ĐỘNG - SALE HUDDLE</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Sale Huddle Dashboard (Google Sheet)</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eef6f5}
+  .bar{background:#fff;padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+  .btn{border:0;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer}
+  .btn.green{background:#0b7a6b;color:#fff}
+  .pill{background:#0b7a6b;color:#fff;border-radius:999px;padding:6px 10px;font-weight:700}
+  .wrap{max-width:1400px;margin:0 auto;padding:14px}
+  .table-wrap{background:#fff;border-radius:12px;border:1px solid #dfe7e6;overflow:auto}
+  table{border-collapse:separate;border-spacing:0;min-width:1100px;width:100%}
+  thead th{position:sticky;top:0;background:#045a4f;color:#fff;padding:10px 8px;font-size:12px;white-space:nowrap;z-index:5}
+  thead tr.sub th{top:38px;background:#0b7a6b}
+  th.sticky-col,td.sticky-col{position:sticky;left:0;z-index:6;background:#0b6b5f;color:#fff;text-align:left;min-width:320px}
+  tbody td{border-bottom:1px solid #dfe7e6;border-right:1px solid #dfe7e6;padding:8px 6px;font-size:12px;text-align:center;white-space:nowrap;color:#14302c}
+  tbody tr:nth-child(even) td{background:#fbfefd}
 
-  <!-- CDN libs. Nếu mạng nội bộ chặn CDN: tải về và thay bằng đường dẫn local -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  /* hover không mất chữ */
+  tbody tr:hover td{background:#f1fbf8;color:#14302c}
+  tbody tr:hover td.sticky-col{background:#0b6b5f;color:#fff}
 
-  <style>
-    :root{
-      --bidv-green:#0b7a6b;
-      --bidv-green-dark:#045a4f;
-      --bg:#eaf3f1;
-      --card:#ffffff;
-      --grid:#dfe7e6;
-      --text:#14302c;
-      --muted:#5b6f6b;
-      --shadow:0 6px 18px rgba(0,0,0,.08);
-      --radius:14px;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family: Arial, Helvetica, sans-serif;
-      color:var(--text);
-      background:linear-gradient(180deg, #f3fbf9 0%, var(--bg) 45%, #dfeeed 100%);
-    }
-    .wrap{max-width:1400px;margin:0 auto;padding:14px 14px 26px}
-    .topbar{
-      background:var(--card);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      padding:14px 16px;
-      display:flex;align-items:center;gap:14px;flex-wrap:wrap;
-    }
-    .brand{display:flex;align-items:center;gap:12px;min-width:280px;}
-    .logo{
-      width:58px;height:38px;border-radius:10px;
-      background:linear-gradient(135deg,var(--bidv-green),var(--bidv-green-dark));
-      display:flex;align-items:center;justify-content:center;
-      color:#fff;font-weight:800;letter-spacing:.5px;
-    }
-    .title{line-height:1.15;}
-    .title h1{margin:0;font-size:16px}
-    .title div{margin-top:2px;color:var(--muted);font-size:12px}
-    .controls{
-      display:flex;gap:10px;flex-wrap:wrap;align-items:center;flex:1;
-      justify-content:flex-end;
-    }
-    .control{
-      background:#f6fbfa;border:1px solid var(--grid);
-      padding:8px 10px;border-radius:12px;
-      display:flex;align-items:center;gap:8px;
-      min-height:38px;
-    }
-    .control label{font-size:12px;color:var(--muted);white-space:nowrap}
-    .control input[type="file"]{font-size:12px;max-width:260px;}
-    select{
-      border:1px solid var(--grid);
-      background:#fff;
-      padding:6px 10px;border-radius:10px;
-      font-size:12px;outline:none;
-      min-width:170px;
-    }
-    .pill{
-      background:var(--bidv-green);
-      color:#fff;border-radius:999px;
-      padding:6px 10px;font-size:12px;font-weight:700;
-      white-space:nowrap;
-    }
-    .card{
-      margin-top:12px;
-      background:var(--card);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      padding:10px 10px 12px;
-    }
-    .hint{
-      padding:8px 10px;
-      background:#f6fbfa;
-      border:1px dashed #bcd9d4;
-      border-radius:12px;
-      color:var(--muted);
-      font-size:12px;
-      margin:8px 2px 10px;
-    }
-    .actions{
-      display:flex;gap:10px;justify-content:center;flex-wrap:wrap;
-      margin-top:10px;
-    }
-    .btn{
-      border:none;cursor:pointer;
-      border-radius:12px;
-      padding:10px 14px;
-      font-weight:700;
-      font-size:13px;
-      display:inline-flex;align-items:center;gap:8px;
-      box-shadow:0 4px 12px rgba(0,0,0,.08);
-    }
-    .btn.green{background:var(--bidv-green);color:#fff}
-    .btn.gray{background:#e8efee;color:#173a34}
-    .btn.yellow{background:#f2c94c;color:#2c2c2c}
-    .btn:disabled{opacity:.55;cursor:not-allowed}
-
-    .table-wrap{
-      width:100%;
-      overflow:auto;
-      border-radius:12px;
-      border:1px solid var(--grid);
-      background:#fff;
-    }
-    table{
-      width:100%;
-      border-collapse:separate;
-      border-spacing:0;
-      min-width:1100px;
-    }
-    thead th{
-      position:sticky;top:0;z-index:5;
-      background:var(--bidv-green-dark);
-      color:#fff;
-      font-size:12px;
-      padding:10px 8px;
-      border-bottom:1px solid #0d6b60;
-      text-align:center;
-      white-space:nowrap;
-    }
-    thead tr.sub th{
-      top:38px;
-      background:var(--bidv-green);
-      border-bottom:1px solid #0d6b60;
-      font-weight:700;
-      padding:8px 6px;
-    }
-    th.sticky-col, td.sticky-col{
-      position:sticky;left:0;z-index:6;
-      background:#0b6b5f;
-      color:#ffffff;
-      text-align:left;
-      min-width:320px;
-      max-width:420px;
-    }
-    thead tr.sub th.sticky-col{background:#0b6b5f;}
-
-    /* ✅ FIX “CHỮ TRẮNG TRÊN NỀN TRẮNG”: ép chữ tbody về màu đậm */
-    tbody td{ color:#14302c; }
-
-    tbody td{
-      border-bottom:1px solid var(--grid);
-      border-right:1px solid var(--grid);
-      padding:8px 6px;
-      font-size:12px;
-      text-align:center;
-      white-space:nowrap;
-    }
-    tbody td:first-child{border-right:1px solid #0d6b60;}
-    tbody tr:nth-child(even) td{background:#fbfefd}
-    tbody tr:hover td{background:#f1fbf8}
-
-    .metric{font-weight:700;line-height:1.2;}
-    .metric .code{opacity:.95;font-weight:900;display:inline-block;margin-right:8px;}
-    .metric .name{opacity:.95;}
-    .cell-dual{font-variant-numeric: tabular-nums;}
-    .muted{color:var(--muted)}
-    .pct{
-      font-weight:800;border-radius:10px;padding:5px 8px;
-      display:inline-block;min-width:66px;
-    }
-    .pct.green{background:#e9fbef;color:#0b7a2a;border:1px solid #b9f0c8}
-    .pct.yellow{background:#fff7df;color:#9a6b00;border:1px solid #ffe1a3}
-    .pct.red{background:#ffe9e9;color:#b32020;border:1px solid #ffc2c2}
-
-    .footerbar{
-      margin-top:10px;
-      display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;
-      color:var(--muted);font-size:12px;padding:0 4px;
-    }
-    .badge{
-      background:#f0f7f6;border:1px solid var(--grid);
-      border-radius:999px;padding:4px 10px;
-    }
-
-/* ========= FIX HIỂN THỊ CHỮ (TRÁNH TRẮNG TRÊN TRẮNG) ========= */
-
-/* 1) Mặc định: tất cả ô trong tbody chữ màu đậm */
-#reportTable tbody td{
-  color: #14302c !important;
-}
-
-/* 2) Chỉ riêng cột sticky (Hoạt động) mới chữ trắng trên nền xanh */
-#reportTable tbody td.sticky-col,
-#reportTable thead th.sticky-col{
-  color: #ffffff !important;
-  background: #0b6b5f !important;
-}
-
-/* 3) Hover: các ô thường đổi nền nhạt nhưng chữ vẫn đậm */
-#reportTable tbody tr:hover td{
-  background: #f1fbf8 !important;
-  color: #14302c !important;
-}
-
-/* 4) Hover: giữ nguyên cột sticky nền xanh và chữ trắng */
-#reportTable tbody tr:hover td.sticky-col{
-  background: #0b6b5f !important;
-  color: #ffffff !important;
-}
-
-/* 5) Hover: badge % vẫn giữ màu */
-#reportTable tbody tr:hover td .pct.green{ color:#0b7a2a !important; }
-#reportTable tbody tr:hover td .pct.yellow{ color:#9a6b00 !important; }
-#reportTable tbody tr:hover td .pct.red{ color:#b32020 !important; }
-
-
-  </style>
+  .pct{font-weight:800;border-radius:10px;padding:5px 8px;display:inline-block;min-width:66px}
+  .pct.green{background:#e9fbef;color:#0b7a2a;border:1px solid #b9f0c8}
+  .pct.yellow{background:#fff7df;color:#9a6b00;border:1px solid #ffe1a3}
+  .pct.red{background:#ffe9e9;color:#b32020;border:1px solid #ffc2c2}
+  .small{font-size:12px;color:#4b615d}
+</style>
 </head>
-
 <body>
-  <div class="wrap">
-    <div class="topbar">
-      <div class="brand">
-        <div class="logo">BIDV</div>
-        <div class="title">
-          <h1>BẢNG THEO DÕI HOẠT ĐỘNG – SALE HUDDLE</h1>
-          <div id="subtitle">Chọn file Excel để hiển thị</div>
-        </div>
-      </div>
+<div class="bar">
+  <button class="btn green" id="btnReload">↻ Tải lại dữ liệu</button>
+  <span class="pill" id="status">Đang tải...</span>
+  <span class="small" id="meta"></span>
+</div>
 
-      <div class="controls">
-        <div class="control">
-          <label>File dữ liệu:</label>
-          <input id="fileInput" type="file" accept=".xlsx,.xls"/>
-        </div>
-
-        <div class="control">
-          <label>Phòng ban:</label>
-          <select id="selPhong">
-            <option value="__ALL__">Tất cả</option>
-          </select>
-        </div>
-
-        <div class="control">
-          <label>Chế độ xem:</label>
-          <select id="selView">
-            <option value="PHONG">Tổng phòng</option>
-            <option value="CANBO">Chi tiết cán bộ</option>
-          </select>
-        </div>
-
-        <div class="pill" id="weekPill">—</div>
-      </div>
-    </div>
-
-    <div class="card">
-    <div style="height:6px"></div>
-      <div id="tableArea" class="table-wrap" style="display:none;">
-        <div id="captureArea">
-          <table id="reportTable">
-            <thead id="thead"></thead>
-            <tbody id="tbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button class="btn green" id="btnRender" disabled>🔄 Dựng bảng</button>
-        <button class="btn gray" id="btnExcel" disabled>⬇️ Export Excel</button>
-        <button class="btn yellow" id="btnPDF" disabled>🧾 Export PDF</button>
-      </div>
-
-      <div class="footerbar">
-        <div class="badge" id="statRows">Rows: —</div>
-        <div class="badge" id="statUnits">Units: —</div>
-        <div class="badge" id="statUpdated">Updated: —</div>
-      </div>
-    </div>
+<div class="wrap">
+  <div class="table-wrap">
+    <table id="reportTable">
+      <thead id="thead"></thead>
+      <tbody id="tbody"></tbody>
+    </table>
   </div>
+</div>
 
 <script>
-/************************************
- * MAP TÊN CHỈ TIÊU HU (tuỳ chỉnh theo CN)
- ************************************/
+/*** ✅ LINK CSV PUBLISH CỦA ANH ***/
+
+const SHEETS_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vS6zJMR5_dkYloX4bJ_1uMmDGBLonB8NKAHb5hUtFHwfT18e2Wo07j7qbq4aEUtPKINeSrR1N1RnEfc/gviz/tq?gid=1202320904&tqx=out:csv&tq=select%20*";
+
+/* Map tên HU (anh có thể sửa lại) */
 const HU_NAME = {
-  HU1:  "Số khách hàng tương tác",
-  HU2:  "Số khách hàng trình bày sản phẩm",
-  HU3:  "Số khách hàng bán thành công",
-  HU4:  "Số sản phẩm bán thành công",
-  HU5:  "Dư nợ phát sinh trong kỳ (Tỷ đồng)",
-  HU6:  "HĐV phát sinh trong kỳ (Tỷ đồng)",
-  HU7:  "Thẻ tín dụng mới (Thẻ)",
-  HU8:  "Doanh số bảo hiểm (BHNT, BHPNT) (Triệu đồng)",
-  HU9:  "Doanh số sản phẩm đầu tư (Triệu đồng)",
-  HU10: "Thu phí TK số đẹp (Triệu đồng)",
-  HU11: "Doanh số CTQT (Triệu đồng)"
+  HU1:"Số khách hàng tương tác",
+  HU2:"Số khách hàng trình bày sản phẩm",
+  HU3:"Số khách hàng bán thành công",
+  HU4:"Số sản phẩm bán thành công",
+  HU5:"Dư nợ phát sinh trong kỳ (Tỷ đồng)",
+  HU6:"HĐV phát sinh trong kỳ (Tỷ đồng)",
+  HU7:"Thẻ tín dụng mới (Thẻ)",
+  HU8:"Doanh số bảo hiểm (Triệu đồng)",
+  HU9:"Doanh số sản phẩm đầu tư (Triệu đồng)",
+  HU10:"Thu phí TK số đẹp (Triệu đồng)",
+  HU11:"Doanh số CTQT (Triệu đồng)"
 };
 
-/************************************
- * BIẾN CHUNG
- ************************************/
+const REQUIRED_COLS = ['Mã chi nhánh','Tên chi nhánh','Mã phòng','Tên phòng','Mã cán bộ','Tên cán bộ','Tiêu chí'];
+const TIEUCHI_KEYS = {
+  'Kế hoạch tháng':'KH_THANG','Thực hiện tháng':'TH_THANG','Hoàn thành tháng (%)':'HT_THANG',
+  'Kế hoạch tuần':'KH_TUAN','Thực hiện tuần':'TH_TUAN','Hoàn thành tuần (%)':'HT_TUAN',
+  'Kế hoạch ngày':'KH_NGAY','Thực hiện ngày':'TH_NGAY','Hoàn thành ngày (%)':'HT_NGAY'
+};
+
 let RAW = [];
 let METRIC_COLS = [];
-let BRANCH_NAME = '';
-let CURRENT_WEEK_PILL = '';
-let FILE_NAME = '';
 
-const el = (id)=>document.getElementById(id);
+const el = id => document.getElementById(id);
 
-const REQUIRED_COLS = [
-  'Mã chi nhánh','Tên chi nhánh','Mã phòng','Tên phòng','Mã cán bộ','Tên cán bộ','Tiêu chí'
-];
-
-// mapping tiêu chí -> key
-const TIEUCHI_KEYS = {
-  'Kế hoạch tháng': 'KH_THANG',
-  'Thực hiện tháng': 'TH_THANG',
-  'Hoàn thành tháng (%)': 'HT_THANG',
-
-  'Kế hoạch tuần': 'KH_TUAN',
-  'Thực hiện tuần': 'TH_TUAN',
-  'Hoàn thành tuần (%)': 'HT_TUAN',
-
-  'Kế hoạch ngày': 'KH_NGAY',
-  'Thực hiện ngày': 'TH_NGAY',
-  'Hoàn thành ngày (%)': 'HT_NGAY'
-};
-
-/************************************
- * UTIL
- ************************************/
-function normalizeKey(k){
-  return String(k)
-    .replace(/\u00A0/g,' ')   // NBSP -> space
-    .replace(/\s+/g,' ')     // nhiều space -> 1
-    .trim();
-}
-function normalizeRowKeys(row){
-  const out = {};
-  for(const k of Object.keys(row)){
-    out[normalizeKey(k)] = row[k];
-  }
-  return out;
-}
+function normalizeKey(k){ return String(k).replace(/\u00A0/g,' ').replace(/\s+/g,' ').trim(); }
 function safeNum(v){
-  if(v === null || v === undefined || v === '') return null;
-  if(typeof v === 'number') return v;
+  if(v===null||v===undefined||v==='') return null;
+  if(typeof v==='number') return v;
   const s = String(v).trim().replaceAll('.','').replaceAll(',','.');
   const n = Number(s);
-  return Number.isFinite(n) ? n : null;
+  return Number.isFinite(n)?n:null;
 }
-function fmtNumber(n){
-  if(n === null || n === undefined) return '—';
-  return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(n);
-}
-function fmtDual(th, kh){
-  if(th === null && kh === null) return '—';
-  if(th === null) return `— / ${fmtNumber(kh)}`;
-  if(kh === null) return `${fmtNumber(th)} / —`;
+function fmtNumber(n){ if(n==null) return '—'; return new Intl.NumberFormat('vi-VN',{maximumFractionDigits:2}).format(n); }
+function fmtDual(th,kh){
+  if(th==null && kh==null) return '—';
+  if(th==null) return `— / ${fmtNumber(kh)}`;
+  if(kh==null) return `${fmtNumber(th)} / —`;
   return `${fmtNumber(th)} / ${fmtNumber(kh)}`;
 }
-function pctClass(p){
-  if(p === null) return 'yellow';
-  if(p >= 100) return 'green';
-  if(p >= 80) return 'yellow';
-  return 'red';
-}
+function pctClass(p){ if(p==null) return 'yellow'; if(p>=100) return 'green'; if(p>=80) return 'yellow'; return 'red'; }
 function escapeHtml(s){
-  return String(s)
-    .replaceAll('&','&amp;')
-    .replaceAll('<','&lt;')
-    .replaceAll('>','&gt;')
-    .replaceAll('"','&quot;')
-    .replaceAll("'","&#039;");
+  return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;");
+}
+function metricLabel(h){
+  const raw = normalizeKey(h);
+  const m = raw.match(/^(HU\d+)\b/i);
+  if(m){
+    const code = m[1].toUpperCase();
+    return {code, name: HU_NAME[code] || raw};
+  }
+  return {code: raw, name: raw};
 }
 
-/************************************
- * ĐỌC EXCEL
- ************************************/
-function readExcel(file){
-  return new Promise((resolve,reject)=>{
-    const reader = new FileReader();
-    reader.onload = (e)=>{
-      try{
-        const data = new Uint8Array(e.target.result);
-        const wb = XLSX.read(data, {type:'array'});
-        const sheetName = wb.SheetNames.find(n => String(n).toLowerCase() === 'data') || wb.SheetNames[0];
-        const ws = wb.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(ws, {defval: null});
-        resolve({sheetName, rows: json});
-      }catch(err){ reject(err); }
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file);
-  });
+/* CSV parser đủ dùng (không cần lib) */
+function parseCSV(text){
+  const rows = [];
+  let cur = [], field = '', inQuotes = false;
+  for(let i=0;i<text.length;i++){
+    const ch = text[i], next = text[i+1];
+    if(ch === '"' ){
+      if(inQuotes && next === '"'){ field += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if(ch === ',' && !inQuotes){
+      cur.push(field); field = '';
+    } else if((ch === '\n' || ch === '\r') && !inQuotes){
+      if(ch === '\r' && next === '\n') i++;
+      cur.push(field); field='';
+      if(cur.some(x=>x!=='')) rows.push(cur);
+      cur = [];
+    } else {
+      field += ch;
+    }
+  }
+  cur.push(field);
+  if(cur.some(x=>x!=='')) rows.push(cur);
+  return rows;
 }
 
-/************************************
- * XÁC ĐỊNH CỘT CHỈ TIÊU THEO HEADER THỰC TẾ (fix lệch do HĐV chen giữa HU6-HU7)
- * - Ưu tiên đúng thứ tự theo ảnh: HU1..HU6, HĐV tăng mới, HĐV quay vòng, HU7..HU11
- ************************************/
-function validateHeader(sampleRow){
-  const keys = Object.keys(sampleRow).map(normalizeKey);
-
+function validateHeader(headers){
+  const keys = headers.map(normalizeKey);
   const missing = REQUIRED_COLS.filter(c => !keys.includes(c));
   if(missing.length){
-    alert('Thiếu cột bắt buộc: ' + missing.join(', '));
-    return false;
+    throw new Error('Thiếu cột: ' + missing.join(', '));
   }
 
-  // 1) Dò cột HU theo mã (nhận "HU2" hoặc "HU2 - ...")
-  const huMap = new Map(); // huNumber -> headerKey
+  // build metric cols theo thứ tự đúng: HU1..HU6, HĐV tăng mới, HĐV quay vòng, HU7..HU11
+  const huMap = new Map();
   for(const k of keys){
     const m = k.match(/^HU(\d+)\b/i);
     if(m){
-      const num = parseInt(m[1], 10);
-      if(!huMap.has(num)) huMap.set(num, k);
+      const num = parseInt(m[1],10);
+      if(!huMap.has(num)) huMap.set(num,k);
     }
   }
-
-  // 2) Dò 2 cột chen giữa (có thể khác hoa/thường, có (Tỷ đồng))
   const colHDV_TANG = keys.find(k => /^HĐV\s*tăng\s*mới\b/i.test(k)) || null;
   const colHDV_QUAY = keys.find(k => /^HĐV\s*quay\s*vòng\b/i.test(k)) || null;
 
-  // 3) Build METRIC_COLS theo thứ tự mong muốn (dựa trên ảnh)
   METRIC_COLS = [];
-
-  // HU1..HU6
-  for(let i=1;i<=6;i++){
-    if(huMap.has(i)) METRIC_COLS.push(huMap.get(i));
-  }
-  // chèn 2 cột HĐV
+  for(let i=1;i<=6;i++){ if(huMap.has(i)) METRIC_COLS.push(huMap.get(i)); }
   if(colHDV_TANG) METRIC_COLS.push(colHDV_TANG);
   if(colHDV_QUAY) METRIC_COLS.push(colHDV_QUAY);
-  // HU7..HU50 (nếu file có nhiều hơn 11 thì vẫn ăn)
+
   const huNums = Array.from(huMap.keys()).sort((a,b)=>a-b);
-  for(const n of huNums){
-    if(n>=7) METRIC_COLS.push(huMap.get(n));
-  }
+  for(const n of huNums){ if(n>=7) METRIC_COLS.push(huMap.get(n)); }
 
-  if(METRIC_COLS.length === 0){
-    alert('Không tìm thấy cột chỉ tiêu (HU/HĐV) trong file Excel.');
-    return false;
-  }
-  return true;
+  if(METRIC_COLS.length===0) throw new Error('Không tìm thấy cột chỉ tiêu.');
 }
 
-/************************************
- * NHÃN CHỈ TIÊU
- ************************************/
-function metricLabelFromHeader(h){
-  const raw = normalizeKey(h);
-  const hu = raw.match(/^(HU\d+)\b/i);
-  if(hu){
-    const code = hu[1].toUpperCase();
-    // nếu header có "HU2 - ..." thì lấy phần sau dấu "-"
-    const m = raw.match(/^(HU\d+)\s*-\s*(.*)$/i);
-    const nameFromExcel = m ? (m[2]||'').trim() : '';
-    return { code, name: HU_NAME[code] || nameFromExcel || raw };
-  }
-  // không phải HU (ví dụ HĐV tăng mới / quay vòng)
-  return { code: raw, name: raw };
-}
-
-/************************************
- * DROPDOWN PHÒNG BAN
- ************************************/
-function buildLookups(){
-  const phongSet = new Set();
-  for(const r of RAW){
-    if(r['Tên phòng']) phongSet.add(String(r['Tên phòng']).trim());
-  }
-  const phongs = Array.from(phongSet).sort((a,b)=>a.localeCompare(b,'vi'));
-  el('selPhong').innerHTML = '<option value="__ALL__">Tất cả</option>' + phongs.map(p=>`<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
-
-  el('subtitle').textContent = `Đang mở: ${FILE_NAME} | Sheet: Data | Chỉ tiêu: ${METRIC_COLS.length}`;
-  el('weekPill').textContent = CURRENT_WEEK_PILL || '—';
-
-  el('statRows').textContent = `Rows: ${RAW.length}`;
-  el('statUpdated').textContent = `Updated: ${new Date().toLocaleString('vi-VN')}`;
-}
-
-/************************************
- * AGG
- ************************************/
 function aggregate(){
-  const view = el('selView').value; // PHONG | CANBO
-  const selectedPhong = el('selPhong').value;
+  const unitSet = new Set(RAW.map(r=>String(r['Tên phòng']||'').trim()).filter(Boolean));
+  const units = Array.from(unitSet).sort((a,b)=>a.localeCompare(b,'vi')).map(x=>({key:x,label:x}));
 
-  const filtered = RAW.filter(r=>{
-    if(selectedPhong === '__ALL__') return true;
-    return String(r['Tên phòng']||'').trim() === selectedPhong;
-  });
-
-  // units
-  const unitMap = new Map();
-  for(const r of filtered){
-    let key, label;
-    if(view === 'PHONG'){
-      key = String(r['Tên phòng']||'').trim();
-      label = key || '—';
-    }else{
-      const cb = String(r['Tên cán bộ']||'').trim();
-      const ma = String(r['Mã cán bộ']||'').trim();
-      key = (ma && ma !== 'null') ? `${ma} - ${cb}` : cb;
-      label = key || '—';
-    }
-    if(key) unitMap.set(key, label);
-  }
-
-  let units = Array.from(unitMap.entries()).map(([key,label])=>({key,label}));
-  units.sort((a,b)=>{
-    if(a.label === 'Tổng') return -1;
-    if(b.label === 'Tổng') return 1;
-    return a.label.localeCompare(b.label,'vi');
-  });
-
-  // matrix
   const matrix = {};
   for(const m of METRIC_COLS){
     matrix[m] = {};
     for(const u of units){
-      matrix[m][u.key] = {
-        TH_THANG:null, KH_THANG:null,
-        TH_TUAN:null,  KH_TUAN:null, HT_TUAN:null,
-        TH_NGAY:null,  KH_NGAY:null
-      };
+      matrix[m][u.key] = {TH_THANG:null,KH_THANG:null,TH_TUAN:null,KH_TUAN:null,HT_TUAN:null,TH_NGAY:null,KH_NGAY:null};
     }
   }
 
-  for(const r of filtered){
+  for(const r of RAW){
     const tc = String(r['Tiêu chí']||'').trim();
     const k = TIEUCHI_KEYS[tc];
     if(!k) continue;
 
-    let unitKey;
-    if(view === 'PHONG'){
-      unitKey = String(r['Tên phòng']||'').trim();
-    }else{
-      const cb = String(r['Tên cán bộ']||'').trim();
-      const ma = String(r['Mã cán bộ']||'').trim();
-      unitKey = (ma && ma !== 'null') ? `${ma} - ${cb}` : cb;
-    }
-    if(!unitKey || !units.find(u=>u.key===unitKey)) continue;
+    const unitKey = String(r['Tên phòng']||'').trim();
+    if(!unitKey) continue;
 
     for(const m of METRIC_COLS){
       const val = safeNum(r[m]);
-      if(val === null) continue;
+      if(val==null) continue;
 
-      if(k === 'KH_THANG') matrix[m][unitKey].KH_THANG = val;
-      if(k === 'TH_THANG') matrix[m][unitKey].TH_THANG = val;
+      if(k==='KH_THANG') matrix[m][unitKey].KH_THANG = val;
+      if(k==='TH_THANG') matrix[m][unitKey].TH_THANG = val;
 
-      if(k === 'KH_TUAN')  matrix[m][unitKey].KH_TUAN  = val;
-      if(k === 'TH_TUAN')  matrix[m][unitKey].TH_TUAN  = val;
-      if(k === 'HT_TUAN')  matrix[m][unitKey].HT_TUAN  = val;
+      if(k==='KH_TUAN') matrix[m][unitKey].KH_TUAN = val;
+      if(k==='TH_TUAN') matrix[m][unitKey].TH_TUAN = val;
+      if(k==='HT_TUAN') matrix[m][unitKey].HT_TUAN = val;
 
-      if(k === 'KH_NGAY')  matrix[m][unitKey].KH_NGAY  = val;
-      if(k === 'TH_NGAY')  matrix[m][unitKey].TH_NGAY  = val;
+      if(k==='KH_NGAY') matrix[m][unitKey].KH_NGAY = val;
+      if(k==='TH_NGAY') matrix[m][unitKey].TH_NGAY = val;
     }
   }
 
-  // compute HT_TUAN if missing
   for(const m of METRIC_COLS){
     for(const u of units){
-      const cell = matrix[m][u.key];
-      if(cell.HT_TUAN === null && cell.TH_TUAN !== null && cell.KH_TUAN !== null && cell.KH_TUAN !== 0){
-        cell.HT_TUAN = (cell.TH_TUAN / cell.KH_TUAN) * 100;
+      const c = matrix[m][u.key];
+      if(c.HT_TUAN==null && c.TH_TUAN!=null && c.KH_TUAN!=null && c.KH_TUAN!==0){
+        c.HT_TUAN = (c.TH_TUAN/c.KH_TUAN)*100;
       }
     }
   }
 
-  return {units, matrix};
+  return {units,matrix};
 }
 
-/************************************
- * RENDER
- ************************************/
 function render(){
-  const {units, matrix} = aggregate();
+  const {units,matrix} = aggregate();
 
-  const thead = el('thead');
-  const topRow = [];
+  const topRow = [`<th class="sticky-col" rowspan="2">Hoạt động</th>`];
   const subRow = [];
-
-  topRow.push(`<th class="sticky-col" rowspan="2">Hoạt động</th>`);
   for(const u of units){
     topRow.push(`<th colspan="4">${escapeHtml(u.label)}</th>`);
-    subRow.push(`<th>Tháng</th>`);
-    subRow.push(`<th>Tuần</th>`);
-    subRow.push(`<th>% HT Tuần</th>`);
-    subRow.push(`<th>Ngày</th>`);
+    subRow.push(`<th>Tháng</th><th>Tuần</th><th>% HT Tuần</th><th>Ngày</th>`);
   }
+  el('thead').innerHTML = `<tr>${topRow.join('')}</tr><tr class="sub">${subRow.join('')}</tr>`;
 
-  thead.innerHTML = `
-    <tr>${topRow.join('')}</tr>
-    <tr class="sub">${subRow.join('')}</tr>
-  `;
-
-  const tbody = el('tbody');
   const rows = [];
-
   for(const m of METRIC_COLS){
-    const ml = metricLabelFromHeader(m);
-
-    const left = `
-      <td class="sticky-col">
-        <div class="metric">
-          <span class="code">${escapeHtml(ml.code)}</span>
-          <span class="name">${escapeHtml(ml.name)}</span>
-        </div>
-      </td>
-    `;
-
+    const ml = metricLabel(m);
+    const left = `<td class="sticky-col"><b>${escapeHtml(ml.code)}</b> ${escapeHtml(ml.name)}</td>`;
     const cells = [];
     for(const u of units){
       const c = matrix[m][u.key];
-
-      const thang = `<span class="cell-dual">${fmtDual(c.TH_THANG, c.KH_THANG)}</span>`;
-      const tuan  = `<span class="cell-dual">${fmtDual(c.TH_TUAN,  c.KH_TUAN)}</span>`;
-
-      const pctVal = (c.HT_TUAN===null)? null : c.HT_TUAN;
-      const pctTxt = (pctVal===null)? '—' : `${fmtNumber(pctVal)}%`;
-      const pctCls = pctClass(pctVal);
-
-      const ngay  = `<span class="cell-dual">${fmtDual(c.TH_NGAY,  c.KH_NGAY)}</span>`;
-
-      cells.push(`<td>${thang}</td>`);
-      cells.push(`<td>${tuan}</td>`);
-      cells.push(`<td><span class="pct ${pctCls}">${pctTxt}</span></td>`);
-      cells.push(`<td>${ngay}</td>`);
+      const pctVal = c.HT_TUAN==null?null:c.HT_TUAN;
+      cells.push(`<td>${fmtDual(c.TH_THANG,c.KH_THANG)}</td>`);
+      cells.push(`<td>${fmtDual(c.TH_TUAN,c.KH_TUAN)}</td>`);
+      cells.push(`<td><span class="pct ${pctClass(pctVal)}">${pctVal==null?'—':fmtNumber(pctVal)+'%'}</span></td>`);
+      cells.push(`<td>${fmtDual(c.TH_NGAY,c.KH_NGAY)}</td>`);
     }
-
     rows.push(`<tr>${left}${cells.join('')}</tr>`);
   }
-
-  tbody.innerHTML = rows.join('');
-  el('tableArea').style.display = 'block';
-  el('statUnits').textContent = `Units: ${units.length}`;
+  el('tbody').innerHTML = rows.join('');
 }
 
-/************************************
- * EXPORT
- ************************************/
-function tableToAoA(){
-  const table = el('reportTable');
-  const aoa = [];
-  for(const tr of table.rows){
-    const row = [];
-    for(const cell of tr.cells){
-      row.push(cell.innerText.replace(/\s+/g,' ').trim());
-    }
-    aoa.push(row);
-  }
-  return aoa;
-}
-async function exportExcel(){
-  const aoa = tableToAoA();
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  XLSX.utils.book_append_sheet(wb, ws, 'Dashboard');
-  const fn = `Dashboard_${(BRANCH_NAME||'SaleHuddle').replaceAll(' ','_')}.xlsx`;
-  XLSX.writeFile(wb, fn);
-}
-async function exportPDF(){
-  const cap = el('captureArea');
-  const canvas = await html2canvas(cap, {scale: 2, backgroundColor: '#ffffff', useCORS: true});
-  const imgData = canvas.toDataURL('image/png');
+async function loadFromSheet(){
+  el('status').textContent = 'Đang tải...';
+  const res = await fetch(SHEETS_CSV_URL, {cache:'no-store'});
+  if(!res.ok) throw new Error('Không tải được CSV từ Google Sheets.');
 
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF('l', 'pt', 'a4');
-  const pageW = pdf.internal.pageSize.getWidth();
-  const pageH = pdf.internal.pageSize.getHeight();
+  const text = await res.text();
+  const grid = parseCSV(text);
+  if(grid.length < 2) throw new Error('CSV rỗng hoặc sai định dạng.');
 
-  const imgW = pageW;
-  const imgH = canvas.height * (imgW / canvas.width);
+  const headers = grid[0].map(normalizeKey);
+  validateHeader(headers);
 
-  let y = 0;
-  let remaining = imgH;
+  RAW = grid.slice(1).map(r=>{
+    const obj = {};
+    headers.forEach((h,idx)=> obj[h] = r[idx] ?? null);
+    return obj;
+  });
 
-  pdf.addImage(imgData, 'PNG', 0, 0, imgW, imgH);
-  remaining -= pageH;
+  render();
 
-  while(remaining > 0){
-    y -= pageH;
-    pdf.addPage();
-    pdf.addImage(imgData, 'PNG', 0, y, imgW, imgH);
-    remaining -= pageH;
-  }
-
-  const fn = `Dashboard_${(BRANCH_NAME||'SaleHuddle').replaceAll(' ','_')}.pdf`;
-  pdf.save(fn);
+  const branch = RAW.find(r => r['Tên chi nhánh'] && String(r['Tên chi nhánh']).trim())?.['Tên chi nhánh'] || '';
+  el('meta').textContent = `${branch ? ('Chi nhánh: '+branch+' | ') : ''}Rows: ${RAW.length} | Updated: ${new Date().toLocaleString('vi-VN')}`;
+  el('status').textContent = 'Đã tải';
 }
 
-/************************************
- * EVENTS
- ************************************/
-el('fileInput').addEventListener('change', async (e)=>{
-  const file = e.target.files?.[0];
-  if(!file) return;
-  FILE_NAME = file.name;
+el('btnReload').addEventListener('click', ()=>loadFromSheet().catch(err=>{
+  console.error(err);
+  el('status').textContent = 'Lỗi tải';
+  alert(err.message || 'Lỗi tải dữ liệu');
+}));
 
-  try{
-    const {rows} = await readExcel(file);
-    if(!rows || rows.length === 0){
-      alert('Sheet Data không có dữ liệu.');
-      return;
-    }
-
-    RAW = rows.map(normalizeRowKeys);
-
-    if(!validateHeader(RAW[0])) return;
-
-    const bn = RAW.find(r=>r['Tên chi nhánh'] && String(r['Tên chi nhánh']).trim() !== '')?.['Tên chi nhánh'];
-    BRANCH_NAME = bn ? String(bn).trim() : '';
-
-    // lấy ngày từ tên file nếu có ddmmyyyy
-    const m = FILE_NAME.match(/(\d{2})(\d{2})(\d{4})/);
-    CURRENT_WEEK_PILL = m ? `DATE: ${m[1]}/${m[2]}/${m[3]}` : '—';
-
-    buildLookups();
-
-    el('btnRender').disabled = false;
-    el('btnExcel').disabled = false;
-    el('btnPDF').disabled = false;
-
-  }catch(err){
-    console.error(err);
-    alert('Không đọc được file. Vui lòng kiểm tra định dạng .xlsx và sheet Data.');
-  }
+// tự tải khi mở trang
+loadFromSheet().catch(err=>{
+  console.error(err);
+  el('status').textContent = 'Lỗi tải';
+  alert(err.message || 'Lỗi tải dữ liệu');
 });
-
-el('btnRender').addEventListener('click', render);
-el('selPhong').addEventListener('change', ()=>{ if(RAW.length) render(); });
-el('selView').addEventListener('change', ()=>{ if(RAW.length) render(); });
-
-el('btnExcel').addEventListener('click', exportExcel);
-el('btnPDF').addEventListener('click', exportPDF);
 </script>
 </body>
 </html>
