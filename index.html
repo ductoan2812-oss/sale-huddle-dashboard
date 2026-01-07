@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Sale Huddle Dashboard (Google Sheet)</title>
+<title>Sale Huddle Dashboard (Apps Script API)</title>
 <style>
   body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eef6f5}
   .bar{background:#fff;padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:0 2px 10px rgba(0,0,0,.06)}
@@ -18,11 +18,8 @@
   th.sticky-col,td.sticky-col{position:sticky;left:0;z-index:6;background:#0b6b5f;color:#fff;text-align:left;min-width:320px}
   tbody td{border-bottom:1px solid #dfe7e6;border-right:1px solid #dfe7e6;padding:8px 6px;font-size:12px;text-align:center;white-space:nowrap;color:#14302c}
   tbody tr:nth-child(even) td{background:#fbfefd}
-
-  /* hover không mất chữ */
   tbody tr:hover td{background:#f1fbf8;color:#14302c}
   tbody tr:hover td.sticky-col{background:#0b6b5f;color:#fff}
-
   .pct{font-weight:800;border-radius:10px;padding:5px 8px;display:inline-block;min-width:66px}
   .pct.green{background:#e9fbef;color:#0b7a2a;border:1px solid #b9f0c8}
   .pct.yellow{background:#fff7df;color:#9a6b00;border:1px solid #ffe1a3}
@@ -47,13 +44,10 @@
 </div>
 
 <script>
-/*** ✅ LINK CSV PUBLISH CỦA ANH ***/
+/** ✅ DÁN URL WEB APP (Deploy) Ở ĐÂY */
+const API_URL = "https://script.google.com/macros/s/AKfycbyLceE-LHDyCByu_kZLKo7OMtz7gxhKnVCjTtnJE9-iMzK02As_yP4QtUUs4VxJ2V6F/exec"; // ví dụ: https://script.google.com/macros/s/XXXX/exec
 
-const SHEETS_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vS6zJMR5_dkYloX4bJ_1uMmDGBLonB8NKAHb5hUtFHwfT18e2Wo07j7qbq4aEUtPKINeSrR1N1RnEfc/gviz/tq?gid=1202320904&tqx=out:csv";
-
-  
-/* Map tên HU (anh có thể sửa lại) */
+/* Map tên HU */
 const HU_NAME = {
   HU1:"Số khách hàng tương tác",
   HU2:"Số khách hàng trình bày sản phẩm",
@@ -109,39 +103,11 @@ function metricLabel(h){
   return {code: raw, name: raw};
 }
 
-/* CSV parser đủ dùng (không cần lib) */
-function parseCSV(text){
-  const rows = [];
-  let cur = [], field = '', inQuotes = false;
-  for(let i=0;i<text.length;i++){
-    const ch = text[i], next = text[i+1];
-    if(ch === '"' ){
-      if(inQuotes && next === '"'){ field += '"'; i++; }
-      else inQuotes = !inQuotes;
-    } else if(ch === ',' && !inQuotes){
-      cur.push(field); field = '';
-    } else if((ch === '\n' || ch === '\r') && !inQuotes){
-      if(ch === '\r' && next === '\n') i++;
-      cur.push(field); field='';
-      if(cur.some(x=>x!=='')) rows.push(cur);
-      cur = [];
-    } else {
-      field += ch;
-    }
-  }
-  cur.push(field);
-  if(cur.some(x=>x!=='')) rows.push(cur);
-  return rows;
-}
-
 function validateHeader(headers){
   const keys = headers.map(normalizeKey);
   const missing = REQUIRED_COLS.filter(c => !keys.includes(c));
-  if(missing.length){
-    throw new Error('Thiếu cột: ' + missing.join(', '));
-  }
+  if(missing.length) throw new Error('Thiếu cột: ' + missing.join(', '));
 
-  // build metric cols theo thứ tự đúng: HU1..HU6, HĐV tăng mới, HĐV quay vòng, HU7..HU11
   const huMap = new Map();
   for(const k of keys){
     const m = k.match(/^HU(\d+)\b/i);
@@ -157,7 +123,6 @@ function validateHeader(headers){
   for(let i=1;i<=6;i++){ if(huMap.has(i)) METRIC_COLS.push(huMap.get(i)); }
   if(colHDV_TANG) METRIC_COLS.push(colHDV_TANG);
   if(colHDV_QUAY) METRIC_COLS.push(colHDV_QUAY);
-
   const huNums = Array.from(huMap.keys()).sort((a,b)=>a-b);
   for(const n of huNums){ if(n>=7) METRIC_COLS.push(huMap.get(n)); }
 
@@ -190,11 +155,9 @@ function aggregate(){
 
       if(k==='KH_THANG') matrix[m][unitKey].KH_THANG = val;
       if(k==='TH_THANG') matrix[m][unitKey].TH_THANG = val;
-
       if(k==='KH_TUAN') matrix[m][unitKey].KH_TUAN = val;
       if(k==='TH_TUAN') matrix[m][unitKey].TH_TUAN = val;
       if(k==='HT_TUAN') matrix[m][unitKey].HT_TUAN = val;
-
       if(k==='KH_NGAY') matrix[m][unitKey].KH_NGAY = val;
       if(k==='TH_NGAY') matrix[m][unitKey].TH_NGAY = val;
     }
@@ -241,21 +204,29 @@ function render(){
   el('tbody').innerHTML = rows.join('');
 }
 
-async function loadFromSheet(){
+async function loadFromApi(){
+  if(!API_URL || API_URL.includes("PASTE_")){
+    alert("Anh chưa dán URL Web App (Apps Script) vào biến API_URL.");
+    return;
+  }
+
   el('status').textContent = 'Đang tải...';
-  const res = await fetch(SHEETS_CSV_URL, {cache:'no-store'});
-  if(!res.ok) throw new Error('Không tải được CSV từ Google Sheets.');
 
-  const text = await res.text();
-  const grid = parseCSV(text);
-  if(grid.length < 2) throw new Error('CSV rỗng hoặc sai định dạng.');
+  const res = await fetch(API_URL, { cache:'no-store' });
+  if(!res.ok) throw new Error("Không gọi được API Apps Script.");
 
-  const headers = grid[0].map(normalizeKey);
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || "API trả lỗi.");
+
+  const headers = data.headers.map(normalizeKey);
   validateHeader(headers);
 
-  RAW = grid.slice(1).map(r=>{
+  RAW = data.rows.map(r=>{
+    // normalize key của từng row
     const obj = {};
-    headers.forEach((h,idx)=> obj[h] = r[idx] ?? null);
+    for(const k of Object.keys(r)){
+      obj[normalizeKey(k)] = r[k];
+    }
     return obj;
   });
 
@@ -266,14 +237,14 @@ async function loadFromSheet(){
   el('status').textContent = 'Đã tải';
 }
 
-el('btnReload').addEventListener('click', ()=>loadFromSheet().catch(err=>{
+el('btnReload').addEventListener('click', ()=>loadFromApi().catch(err=>{
   console.error(err);
   el('status').textContent = 'Lỗi tải';
   alert(err.message || 'Lỗi tải dữ liệu');
 }));
 
 // tự tải khi mở trang
-loadFromSheet().catch(err=>{
+loadFromApi().catch(err=>{
   console.error(err);
   el('status').textContent = 'Lỗi tải';
   alert(err.message || 'Lỗi tải dữ liệu');
@@ -281,4 +252,3 @@ loadFromSheet().catch(err=>{
 </script>
 </body>
 </html>
-
